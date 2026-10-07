@@ -1,0 +1,34 @@
+{
+  "name": "@aegismint/sdk",
+  "version": "0.1.0",
+  "description": "AegisMint Labs TypeScript SDK for Stellar Soroban RWA & Marketplace smart contracts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./encoders": {
+      "types": "./dist/encoders.d.ts",
+      "import": "./dist/encoders.js",
+      "require": "./dist/encoders.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js",
+      "require": "./dist/contracts/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  }
+}
