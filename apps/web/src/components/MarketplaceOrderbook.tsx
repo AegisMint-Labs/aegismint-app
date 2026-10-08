@@ -129,19 +129,76 @@ export function MarketplaceOrderbook() {
     loadOnChainOrders();
   }, [loadOnChainOrders]);
 
-  // Fulfill an order atomically
+  // Fulfill an order atomically using server-side unsigned XDR builder & Freighter signing
   const handleFulfillOrder = async (order: EscrowOrder) => {
     if (!publicKey || !signer) return;
 
-    setActionStatus(`Simulating atomic fill for ${order.id}...`);
+    setActionStatus(`Constructing unsigned transaction XDR for ${order.id}...`);
     setActionError(null);
 
     try {
+      // 1. Request unsigned transaction XDR from server API route
+      let unsignedXdr: string | null = null;
+      try {
+        const buildRes = await fetch('/api/tx/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: publicKey,
+            contractId: DEFAULT_TESTNET_CONTRACTS.MARKETPLACE_ESCROW,
+            method: 'fulfill_order',
+            params: {
+              orderId: order.id,
+              buyerOrSeller: publicKey,
+              fillAmount: order.remainingAmount.toString(),
+            },
+          }),
+        });
+
+        if (buildRes.ok) {
+          const buildData = await buildRes.json();
+          if (buildData.success && buildData.unsignedXdr) {
+            unsignedXdr = buildData.unsignedXdr;
+          }
+        }
+      } catch {
+        // Fallback to client-side direct simulation if API is unreachable
+      }
+
+      // 2. Client-side signing via Freighter wallet
+      if (unsignedXdr) {
+        setActionStatus('Requesting Freighter signature to execute atomic swap...');
+        const signedTxXdr = await signer.signTransaction(unsignedXdr);
+        if (!signedTxXdr) {
+          throw new Error('Transaction signing was cancelled or rejected');
+        }
+
+        // 3. Submit signed transaction XDR via server submission gateway
+        setActionStatus('Broadcasting signed transaction to Soroban Testnet...');
+        const submitRes = await fetch('/api/tx/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedXdr: signedTxXdr }),
+        });
+
+        const submitData = await submitRes.json();
+        if (submitData.success) {
+          setActionStatus(`Trade settled in Ledger ${submitData.ledger ?? 'Consensus'}! Tx: ${submitData.hash?.slice(0, 10)}...`);
+          setTimeout(() => {
+            setActionStatus(null);
+            loadOnChainOrders();
+          }, 2500);
+          return;
+        } else {
+          throw new Error(submitData.error || 'Failed to confirm transaction on-chain');
+        }
+      }
+
+      // Direct fallback via SDK client
+      setActionStatus('Awaiting Freighter wallet signature...');
       const escrowClient = new MarketplaceEscrowClient(
         DEFAULT_TESTNET_CONTRACTS.MARKETPLACE_ESCROW
       );
-
-      setActionStatus('Requesting Freighter signature to execute atomic swap...');
       const result = await escrowClient.fulfill_order(
         {
           orderId: order.id,
@@ -166,18 +223,72 @@ export function MarketplaceOrderbook() {
     }
   };
 
-  // Cancel order
+  // Cancel order using server-side unsigned XDR builder & Freighter signing
   const handleCancelOrder = async (order: EscrowOrder) => {
     if (!publicKey || !signer) return;
 
-    setActionStatus(`Cancelling order ${order.id} & releasing escrow...`);
+    setActionStatus(`Constructing cancellation transaction for ${order.id}...`);
     setActionError(null);
 
     try {
+      // 1. Build unsigned XDR via server API
+      let unsignedXdr: string | null = null;
+      try {
+        const buildRes = await fetch('/api/tx/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: publicKey,
+            contractId: DEFAULT_TESTNET_CONTRACTS.MARKETPLACE_ESCROW,
+            method: 'cancel_order',
+            params: {
+              creator: publicKey,
+              orderId: order.id,
+            },
+          }),
+        });
+
+        if (buildRes.ok) {
+          const buildData = await buildRes.json();
+          if (buildData.success && buildData.unsignedXdr) {
+            unsignedXdr = buildData.unsignedXdr;
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      if (unsignedXdr) {
+        setActionStatus('Requesting Freighter signature to cancel escrow order...');
+        const signedTxXdr = await signer.signTransaction(unsignedXdr);
+        if (!signedTxXdr) {
+          throw new Error('Transaction signing was cancelled or rejected');
+        }
+
+        setActionStatus('Broadcasting cancellation to Soroban Testnet...');
+        const submitRes = await fetch('/api/tx/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signedXdr: signedTxXdr }),
+        });
+
+        const submitData = await submitRes.json();
+        if (submitData.success) {
+          setActionStatus('Order cancelled. Escrow refund confirmed on-chain.');
+          setTimeout(() => {
+            setActionStatus(null);
+            loadOnChainOrders();
+          }, 2500);
+          return;
+        } else {
+          throw new Error(submitData.error || 'Failed to cancel order on-chain');
+        }
+      }
+
+      // Direct SDK fallback
       const escrowClient = new MarketplaceEscrowClient(
         DEFAULT_TESTNET_CONTRACTS.MARKETPLACE_ESCROW
       );
-
       const result = await escrowClient.cancel_order(
         {
           creator: publicKey,
