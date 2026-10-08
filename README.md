@@ -7,8 +7,7 @@
 [![Next.js 14](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Wave Program](https://img.shields.io/badge/Drips%20Wave-Eligible-purple.svg)](https://www.drips.network)
-[![GrantFox](https://img.shields.io/badge/GrantFox-Verified-success.svg)](https://grantfox.io)
+
 
 </div>
 
