@@ -5,7 +5,8 @@ import {
   isConnected as freighterIsConnected,
   isAllowed as freighterIsAllowed,
   setAllowed as freighterSetAllowed,
-  getPublicKey as freighterGetPublicKey,
+  getAddress as freighterGetAddress,
+  requestAccess as freighterRequestAccess,
   signTransaction as freighterSignTransaction,
   getNetwork as freighterGetNetwork,
 } from '@stellar/freighter-api';
@@ -39,18 +40,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function checkFreighter() {
       try {
-        const connected = await freighterIsConnected();
+        const res = await freighterIsConnected();
+        const connected = res?.isConnected ?? false;
         setHasFreighter(Boolean(connected));
 
         if (connected) {
-          const allowed = await freighterIsAllowed();
-          if (allowed) {
-            const pk = await freighterGetPublicKey();
-            if (pk) {
-              setPublicKey(pk);
+          const allowedRes = await freighterIsAllowed();
+          if (allowedRes?.isAllowed) {
+            const addrRes = await freighterGetAddress();
+            if (addrRes?.address) {
+              setPublicKey(addrRes.address);
               setIsConnected(true);
-              const net = await freighterGetNetwork();
-              if (net) setNetwork(net);
+              const netRes = await freighterGetNetwork();
+              if (netRes?.network) setNetwork(netRes.network);
             }
           }
         }
@@ -66,23 +68,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setIsConnecting(true);
     setError(null);
     try {
-      const hasExtension = await freighterIsConnected();
-      if (!hasExtension) {
+      const connRes = await freighterIsConnected();
+      if (!connRes?.isConnected) {
         setError('Freighter extension not detected. Please install Freighter from freighter.app or enter address manually.');
         setIsConnecting(false);
         return;
       }
 
       await freighterSetAllowed();
-      const pk = await freighterGetPublicKey();
-      if (!pk) {
-        throw new Error('Failed to retrieve public key from Freighter');
+      const accessRes = await freighterRequestAccess();
+      if (accessRes?.error || !accessRes?.address) {
+        throw new Error(accessRes?.error || 'Failed to retrieve public key from Freighter');
       }
 
-      setPublicKey(pk);
+      setPublicKey(accessRes.address);
       setIsConnected(true);
-      const net = await freighterGetNetwork();
-      if (net) setNetwork(net);
+      const netRes = await freighterGetNetwork();
+      if (netRes?.network) setNetwork(netRes.network);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -117,11 +119,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           opts?: { network?: string; networkPassphrase?: string; accountToSign?: string }
         ) => {
           if (hasFreighter) {
-            return freighterSignTransaction(xdr, {
-              network: opts?.network || 'TESTNET',
+            const signRes = await freighterSignTransaction(xdr, {
               networkPassphrase: opts?.networkPassphrase,
-              accountToSign: opts?.accountToSign || publicKey,
+              address: opts?.accountToSign || publicKey,
             });
+            if (signRes?.error) {
+              throw new Error(signRes.error);
+            }
+            return signRes.signedTxXdr;
           }
           // In simulated dev environment without extension, return original XDR
           console.warn('[WalletSigner] Freighter extension not active. Returning simulated signed transaction.');
