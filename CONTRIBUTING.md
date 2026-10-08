@@ -1,4 +1,4 @@
-﻿# Contributing to AegisMint App & SDK
+# Contributing to AegisMint App & SDK
 
 Thank you for your interest in contributing to AegisMint Labs! This monorepo hosts the AegisMint decentralized application (`apps/web`) and the official TypeScript SDK (`packages/sdk`) for interacting with Soroban smart contracts on the Stellar network.
 
@@ -14,8 +14,9 @@ We are dedicated to providing a welcoming, diverse, and harassment-free environm
 
 This repository is managed as a `pnpm` workspace monorepo:
 
-- **`apps/web`**: Next.js 14 (App Router) frontend interface powered by Tailwind CSS and Freighter wallet integration (`@stellar/freighter-api`, `@stellar/stellar-sdk`).
+- **`apps/web`**: Next.js 14 (App Router) frontend interface powered by Tailwind CSS, Freighter wallet integration (`@stellar/freighter-api`, `@stellar/stellar-sdk`), and server API routes for unsigned transaction XDR building (`/api/tx/build`, `/api/tx/submit`, `/api/escrow/fulfill`).
 - **`packages/sdk`**: Strongly typed TypeScript SDK (`@aegismint/sdk`) with Soroban ScVal encoders, contract clients, and RPC helper methods.
+- **`backend`**: Server-side Soroban transaction construction service (`@aegismint/backend`) providing REST endpoints for building simulated unsigned transaction XDR and broadcasting signed transactions.
 
 ---
 

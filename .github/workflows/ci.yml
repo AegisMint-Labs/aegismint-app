@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test Monorepo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript SDK
+        run: pnpm --filter @aegismint/sdk build
+
+      - name: Run SDK unit tests
+        run: node --test packages/sdk/dist/encoders.test.js
+
+      - name: Build backend transaction layer
+        run: pnpm --filter @aegismint/backend build
+
+      - name: Build Next.js dApp
+        run: pnpm --filter aegismint-web build
+
+      - name: Lint workspace
+        run: pnpm --filter aegismint-web lint

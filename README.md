@@ -93,19 +93,26 @@ flowchart TD
 
 ## Monorepo Workspaces
 
-1. **`apps/web` (Next.js 14 App Router)**:
+1. **`apps/web` (Next.js 14 App Router & API Routes)**:
    - High-performance institutional financial terminal interface styled with custom dark glassmorphism and Tailwind CSS tokens.
    - Built-in Freighter wallet connection detection, network inspection, and signature passing.
    - RWA Portfolio Dashboard with live balances, yields, and transfer flows.
    - P2P Orderbook with visual depth bars and atomic trade fulfillment.
    - Asset Factory Console for deploying regulated assets and configuring jurisdiction restrictions.
    - Escrow Settlement Console with Delivery vs. Payment (DvP) guarantee and dispute resolution.
+   - Server-side API routes (`/api/tx/build`, `/api/tx/submit`, `/api/escrow/fulfill`, `/api/escrow/orders`) generating unsigned transaction XDR for safe client-side Freighter signing.
 
 2. **`packages/sdk` (`@aegismint/sdk`)**:
    - Production-grade TypeScript SDK for interacting with Stellar Soroban smart contracts.
    - Strongly typed client wrappers for `RWATokenClient`, `AssetFactoryClient`, and `MarketplaceEscrowClient`.
-   - Comprehensive XDR argument encoders and decoders in `encoders.ts` (`Address`, `i128`, `u128`, `bool`, `u32`, `u64`, `symbol`, `string`, `bytes`, `vec`, `map`).
+   - Comprehensive XDR argument encoders and decoders in `encoders.ts` (`Address`, `i128`, `u128`, `bool`, `u32`, `u64`, `symbol`, `string`, `bytes`, `vec`, `map`, and contract argument builders).
    - Transaction simulation, resource footprint auto-preparation, and submission polling pipeline.
+
+3. **`backend` (`@aegismint/backend`)**:
+   - Server-side transaction construction layer with Soroban RPC helpers.
+   - Prepares unsigned transaction XDR, calculates Soroban resource footprints, and broadcasts signed transactions.
+   - Provides standalone REST endpoints mirroring the Next.js API routes for headless institutional integrations.
+
 
 ---
 
@@ -181,15 +188,32 @@ node --test packages/sdk/dist/encoders.test.js
 
 ```
 aegismint-app/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                   # GitHub Actions CI (build, test, lint)
 ├── apps/
-│   └── web/                         # Next.js 14 frontend application
+│   └── web/                         # Next.js 14 frontend application & API routes
 │       ├── src/
-│       │   ├── app/                 # App Router pages (/, /marketplace, /factory, /escrow)
+│       │   ├── app/                 # App Router pages & API routes
+│       │   │   ├── api/             # Server-side transaction & escrow routes
+│       │   │   │   ├── tx/build/    # Constructs unsigned transaction XDR
+│       │   │   │   ├── tx/submit/   # Broadcasts signed XDR to Soroban RPC
+│       │   │   │   └── escrow/      # Dedicated order fulfillment & listing APIs
+│       │   │   ├── escrow/          # Escrow Settlement & DvP Dispute page
+│       │   │   ├── factory/         # Asset Factory issuance console
+│       │   │   └── marketplace/     # P2P Secondary Orderbook
 │       │   ├── components/          # UI components (WalletConnect, Orderbook, etc.)
-│       │   └── context/             # WalletContext with Freighter v6 integration
+│       │   ├── context/             # WalletContext with Freighter v6 integration
+│       │   └── server/              # ServerSorobanTxService helpers
 │       ├── tailwind.config.ts       # Tailwind CSS luxury dark theme
 │       ├── next.config.mjs          # Next.js configuration
 │       └── package.json             # Web application manifest
+├── backend/                         # Standalone Node/Express transaction service
+│   ├── src/
+│   │   ├── tx-builder.ts            # Soroban RPC transaction preparation
+│   │   └── index.ts                 # REST API endpoints & health check
+│   ├── tsconfig.json                # TypeScript configuration
+│   └── package.json                 # Backend package manifest
 ├── packages/
 │   └── sdk/                         # TypeScript SDK (@aegismint/sdk)
 │       ├── src/
@@ -199,7 +223,7 @@ aegismint-app/
 │       │   │   └── marketplace_escrow.ts # P2P Escrow orderbook client
 │       │   ├── client.ts            # Soroban RPC client & transaction runner
 │       │   ├── constants.ts         # Networks & contract constants
-│       │   ├── encoders.ts          # XDR ScVal encoders and decoders
+│       │   ├── encoders.ts          # XDR ScVal encoders and contract call builders
 │       │   ├── encoders.test.ts     # Unit tests for encoders
 │       │   └── types.ts             # Comprehensive TypeScript types
 │       ├── tsconfig.json            # TypeScript configuration
