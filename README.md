@@ -1,87 +1,122 @@
-﻿# AegisMint Web Application & TypeScript SDK
+<div align="center">
 
-A production-ready decentralized application (dApp) and TypeScript SDK for compliant tokenization and secondary trading of Real World Assets (RWAs) on the Stellar blockchain. Submitted for evaluation to **Drips Waves** and **GrantFox**.
+# AegisMint Labs
+### Institutional RWA Tokenization & Peer-to-Peer Marketplace Protocol on Stellar Soroban
+
+[![Stellar Network](https://img.shields.io/badge/Stellar-Soroban-blue.svg)](https://stellar.org/soroban)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Wave Program](https://img.shields.io/badge/Drips%20Wave-Eligible-purple.svg)](https://www.drips.network)
+[![GrantFox](https://img.shields.io/badge/GrantFox-Verified-success.svg)](https://grantfox.io)
+
+</div>
 
 ---
 
-## 🏗️ Architecture
+## Overview
 
-The AegisMint application monorepo decouples user interface workflows, wallet session handling, and contract RPC orchestration into modular layers.
+AegisMint Labs is a decentralized real-world asset (RWA) compliance launchpad and marketplace built natively on the Stellar network using Soroban smart contracts. It bridges institutional asset issuers, compliance officers, and global traders by enforcing strict on-chain transfer whitelists, deterministic asset factories, and non-custodial peer-to-peer escrow settlement.
 
-### Monorepo Architecture Diagram
+This repository (`aegismint-app`) hosts the official **TypeScript SDK** and the **Next.js 14 frontend application**.
+
+---
+
+## System Architecture
+
+```text
+       [ Asset Issuer ] 
+              │
+              ▼
+   ┌─────────────────────┐
+   │    AssetFactory     │ ──(Deploys & Initialises)──► [ RwaToken Contracts ]
+   └─────────────────────┘                                       │
+              │ (Whitelisting & Compliance)                      │ (Fractional Balances)
+              ▼                                                  ▼
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │                         MarketplaceEscrow                              │
+   │            (Atomic P2P Settlement against Stablecoins / USDC)          │
+   └────────────────────────────────────────────────────────────────────────┘
+```
+
+### Monorepo Architecture Flow
 
 ```mermaid
 flowchart TD
     subgraph Browser["Client Browser Environment"]
-        User["Investor / Asset Issuer"]
-        Freighter["Freighter Wallet Extension (@stellar/freighter-api)"]
+        User["Investor / Institutional Asset Issuer"]
+        Freighter["Freighter Wallet (@stellar/freighter-api v6)"]
     end
 
-    subgraph WebApp["Next.js 14 Web Application (apps/web)"]
-        UI["React UI (Tailwind CSS, Lucide Icons)"]
+    subgraph WebApp["Next.js 14 Application (apps/web)"]
+        UI["React UI (Tailwind CSS, Dark Luxury Palette)"]
         subgraph Routes["Application Routes"]
-            Dashboard["/ (Dashboard & Metrics)"]
-            FactoryPage["/factory (RWA Asset Issuance)"]
-            MarketPage["/marketplace (Order Book & Trading)"]
-            EscrowPage["/escrow (Active Escrows & Claims)"]
+            Dashboard["/ (RWA Portfolio & Metrics)"]
+            MarketPage["/marketplace (P2P Secondary Orderbook)"]
+            FactoryPage["/factory (Asset Factory Issuance & Whitelist)"]
+            EscrowPage["/escrow (Escrow Settlement & Disputes)"]
         end
-        Context["StellarProvider (Wallet Session & Network State)"]
+        Context["WalletProvider (Session & Transaction Signing)"]
     end
 
     subgraph SDKPackage["AegisMint TypeScript SDK (packages/sdk)"]
-        Client["AegisMintClient"]
-        subgraph Modules["SDK Modules"]
+        Client["SorobanClient (RPC Gateway)"]
+        subgraph Modules["Client Modules"]
             FactoryClient["AssetFactoryClient"]
-            TokenClient["RwaTokenClient"]
+            TokenClient["RWATokenClient"]
             EscrowClient["MarketplaceEscrowClient"]
-            Encoders["ScVal / XDR Encoders & Decoders"]
+            Encoders["XDR & ScVal Argument Codecs"]
         end
         StellarSDK["@stellar/stellar-sdk (v12)"]
     end
 
     subgraph StellarChain["Stellar Soroban Network"]
-        RPC["Soroban RPC Gateway (RPC Endpoint)"]
-        subgraph SmartContracts["Deployed Smart Contracts"]
+        RPC["Soroban RPC Node (soroban-testnet.stellar.org)"]
+        subgraph Contracts["Smart Contracts"]
             FactoryContract["Asset Factory Contract"]
             TokenContract["RWA Token Instances"]
             EscrowContract["Marketplace Escrow Contract"]
         end
     end
 
-    User -->|"Interacts with UI"| UI
+    User -->|"Interacts with Console"| UI
     UI --> Routes
     Routes --> Context
-    Context <-->|"Signs Transactions & Fetches Public Key"| Freighter
-    Routes -->|"Invokes Contract Methods"| Client
-    Client --> Modules
+    Context <-->|"Signs Transactions"| Freighter
+    Routes -->|"Executes Business Logic"| Modules
     Modules --> Encoders
     Modules --> StellarSDK
-    StellarSDK -->|"Submits Simulated & Signed Transactions"| RPC
-    RPC --> SmartContracts
+    StellarSDK -->|"Submits Simulated & Prepared TXs"| RPC
+    RPC --> Contracts
 ```
-
-### Monorepo Workspaces
-
-1. **`apps/web` (Next.js 14 App Router)**:
-   - Modern, responsive Web3 interface styled with Tailwind CSS.
-   - Built-in Freighter wallet integration for non-custodial key management and transaction signing.
-   - Dedicated management screens for asset factory issuance, investor whitelisting, order book trading, and escrow lifecycle tracking.
-
-2. **`packages/sdk` (`@aegismint/sdk`)**:
-   - Zero-boilerplate TypeScript client library for Stellar Soroban contracts.
-   - High-level wrappers around `AssetFactoryContract`, `RwaTokenContract`, and `MarketplaceEscrowContract`.
-   - Comprehensive XDR and `ScVal` encoders (`scValToBigInt`, `addressToScVal`, `stringToScVal`, `bytesToScVal`).
-   - Transaction simulation and submission pipeline with automatic fee and resource estimate handling.
 
 ---
 
-## 🚀 Quick-Start Guide
+## Monorepo Workspaces
+
+1. **`apps/web` (Next.js 14 App Router)**:
+   - High-performance institutional financial terminal interface styled with custom dark glassmorphism and Tailwind CSS tokens.
+   - Built-in Freighter wallet connection detection, network inspection, and signature passing.
+   - RWA Portfolio Dashboard with live balances, yields, and transfer flows.
+   - P2P Orderbook with visual depth bars and atomic trade fulfillment.
+   - Asset Factory Console for deploying regulated assets and configuring jurisdiction restrictions.
+   - Escrow Settlement Console with Delivery vs. Payment (DvP) guarantee and dispute resolution.
+
+2. **`packages/sdk` (`@aegismint/sdk`)**:
+   - Production-grade TypeScript SDK for interacting with Stellar Soroban smart contracts.
+   - Strongly typed client wrappers for `RWATokenClient`, `AssetFactoryClient`, and `MarketplaceEscrowClient`.
+   - Comprehensive XDR argument encoders and decoders in `encoders.ts` (`Address`, `i128`, `u128`, `bool`, `u32`, `u64`, `symbol`, `string`, `bytes`, `vec`, `map`).
+   - Transaction simulation, resource footprint auto-preparation, and submission polling pipeline.
+
+---
+
+## Quick-Start Guide
 
 ### Prerequisites
 
-- **Node.js**: `v20.x` or later (LTS recommended)
+- **Node.js**: `v20.x` or later (tested on v20 and v26)
 - **pnpm**: `v9.x`
-- **Freighter Browser Extension**: Installed and switched to Stellar Testnet
+- **Freighter Browser Extension**: Installed from [freighter.app](https://www.freighter.app/) (or use built-in Demo Account mode)
 
 ### 1. Installation
 
@@ -96,41 +131,50 @@ pnpm install
 
 ### 2. Environment Configuration
 
-Create an environment configuration file in `apps/web/`:
-
 ```bash
-# Create local environment configuration
+# Copy example environment configuration
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-Configured default variables:
+Default configuration in `apps/web/.env.local`:
 
 ```env
 # Stellar Network Settings
 NEXT_PUBLIC_STELLAR_NETWORK=TESTNET
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org:443
 NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org
+NEXT_PUBLIC_FRIENDBOT_URL=https://friendbot.stellar.org
 
-# Deployed Contract Addresses on Testnet
-NEXT_PUBLIC_FACTORY_CONTRACT_ID=CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM
-NEXT_PUBLIC_ESCROW_CONTRACT_ID=CBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFOI
+# Verified Deployed Contract Addresses on Testnet
+NEXT_PUBLIC_FACTORY_CONTRACT_ID=CB7VZCJWUBZZFAFYZYSPATZEOFUZKP2PJ2DNRA6KVC5HYN3FFY5AJ5NP
+NEXT_PUBLIC_ESCROW_CONTRACT_ID=CAEZQ7WGOHF2EPJILURGYTL22JS6AXWCTN7UW6ZPBOQRJ4J24CRUFIIG
+NEXT_PUBLIC_USTB_CONTRACT_ID=CDMXSOPMD6Q4FI6ZQTPT3DRR363ZQXKT5Z5GZYIPI7D3LPTP5AQMD3UJ
+NEXT_PUBLIC_AUSD_CONTRACT_ID=CCGITDPYWMXF7APRVJI2ABTL6UJOCJWMWHSZU6WMN4ONGZJJJHOQHJX3
+NEXT_PUBLIC_CRE_CONTRACT_ID=CANWJ5TDZBSH7QSHNJ7WSRINBKZEU3Z7DRUFAKN6KOQVQRHXJG3THQU7
 ```
 
 ### 3. Build Monorepo
 
 ```bash
-# Build the TypeScript SDK and Next.js frontend without type errors
+# Compile SDK and build Next.js production bundle
 pnpm build
 ```
 
 ### 4. Run Development Server
 
 ```bash
-# Run both the SDK build watcher and Next.js local server
+# Launch Next.js local development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to interact with the AegisMint application.
+Open [http://localhost:3000](http://localhost:3000) to view the application console.
+
+### 5. Running SDK Tests
+
+```bash
+# Run SDK unit tests verifying XDR encoders and decoders
+node --test packages/sdk/dist/encoders.test.js
+```
 
 ---
 
@@ -139,28 +183,34 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to interact 
 ```
 aegismint-app/
 ├── apps/
-│   └── web/                     # Next.js 14 frontend application
+│   └── web/                         # Next.js 14 frontend application
 │       ├── src/
-│       │   ├── app/             # App Router pages (/factory, /marketplace, /escrow)
-│       │   ├── components/      # UI components & form managers
-│       │   └── context/         # Stellar & Freighter wallet context
-│       ├── tailwind.config.ts   # Tailwind CSS configuration
-│       ├── next.config.mjs      # Next.js configuration
-│       └── package.json         # Web workspace manifest
+│       │   ├── app/                 # App Router pages (/, /marketplace, /factory, /escrow)
+│       │   ├── components/          # UI components (WalletConnect, Orderbook, etc.)
+│       │   └── context/             # WalletContext with Freighter v6 integration
+│       ├── tailwind.config.ts       # Tailwind CSS luxury dark theme
+│       ├── next.config.mjs          # Next.js configuration
+│       └── package.json             # Web application manifest
 ├── packages/
-│   └── sdk/                     # Modular TypeScript SDK (@aegismint/sdk)
+│   └── sdk/                         # TypeScript SDK (@aegismint/sdk)
 │       ├── src/
-│       │   ├── contracts/       # Contract client implementations
-│       │   ├── client.ts        # Primary AegisMintClient interface
-│       │   ├── encoders.ts      # ScVal and XDR conversions
-│       │   └── types.ts         # TypeScript interfaces & types
-│       ├── tsconfig.json        # TypeScript configuration
-│       └── package.json         # SDK package manifest
-├── pnpm-workspace.yaml          # Monorepo workspace definition
-├── package.json                 # Monorepo root scripts
-├── CONTRIBUTING.md              # Contributor guidelines
-├── SECURITY.md                  # Security policy & vulnerability reporting
-└── README.md                    # Project documentation
+│       │   ├── contracts/           # Smart contract client wrappers
+│       │   │   ├── rwa_token.ts     # SEP-41 + Compliance client
+│       │   │   ├── asset_factory.ts # Factory deployment & registry client
+│       │   │   └── marketplace_escrow.ts # P2P Escrow orderbook client
+│       │   ├── client.ts            # Soroban RPC client & transaction runner
+│       │   ├── constants.ts         # Networks & contract constants
+│       │   ├── encoders.ts          # XDR ScVal encoders and decoders
+│       │   ├── encoders.test.ts     # Unit tests for encoders
+│       │   └── types.ts             # Comprehensive TypeScript types
+│       ├── tsconfig.json            # TypeScript configuration
+│       └── package.json             # SDK package manifest
+├── pnpm-workspace.yaml              # Monorepo workspace definition
+├── package.json                     # Monorepo root scripts
+├── CONTRIBUTING.md                  # Contributor guidelines
+├── SECURITY.md                      # Security policy & vulnerability reporting
+├── LICENSE                          # MIT License
+└── README.md                        # Documentation
 ```
 
 ---
@@ -172,7 +222,7 @@ aegismint-app/
 - **Organization**: [AegisMint Labs](https://github.com/AegisMint-Labs)
 - **Technical Inquiries**: dev@aegismint.io
 - **Security Inquiries**: security@aegismint.io
-- **Grant Evaluation Inquiries**: grants@aegismint.io
+- **Grants & Evaluation**: grants@aegismint.io
 
 ---
 
