@@ -66,6 +66,22 @@ importers:
         specifier: ^5.2.2
         version: 5.9.3
 
+  backend:
+    dependencies:
+      '@aegismint/sdk':
+        specifier: workspace:*
+        version: link:../packages/sdk
+      '@stellar/stellar-sdk':
+        specifier: ^12.3.0
+        version: 12.3.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.16.11
+        version: 20.19.43
+      typescript:
+        specifier: ^5.2.2
+        version: 5.9.3
+
   packages/sdk:
     dependencies:
       '@stellar/stellar-sdk':

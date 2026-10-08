@@ -3,7 +3,8 @@ node_modules
 dist
 .next
 out
-build
+/build
+!apps/web/src/app/api/tx/build
 *.tsbuildinfo
 .env
 .env.local
