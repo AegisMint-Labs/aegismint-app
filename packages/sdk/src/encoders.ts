@@ -360,3 +360,150 @@ export function decodeScVal<T = unknown>(scVal: xdr.ScVal): T {
   if (!scVal) return null as T;
   return scValToNative(scVal) as T;
 }
+
+/**
+ * -----------------------------------------------------------------------------
+ * Explicit Contract Argument Encoders
+ * -----------------------------------------------------------------------------
+ * These helpers prepare typed ScVal argument lists for direct invocation
+ * via Soroban RPC and Operation.invokeContractFunction.
+ */
+
+/**
+ * Encodes arguments for RWA token transfer: `transfer(from, to, amount)`
+ */
+export function encodeTransferArgs(
+  from: string,
+  to: string,
+  amount: bigint | number | string
+): xdr.ScVal[] {
+  return [encodeAddress(from), encodeAddress(to), encodeI128(amount)];
+}
+
+/**
+ * Encodes arguments for RWA token transfer_from: `transfer_from(spender, from, to, amount)`
+ */
+export function encodeTransferFromArgs(
+  spender: string,
+  from: string,
+  to: string,
+  amount: bigint | number | string
+): xdr.ScVal[] {
+  return [
+    encodeAddress(spender),
+    encodeAddress(from),
+    encodeAddress(to),
+    encodeI128(amount),
+  ];
+}
+
+/**
+ * Encodes arguments for updating investor whitelist: `set_whitelist(account, status)`
+ */
+export function encodeSetWhitelistArgs(
+  account: string,
+  status: boolean
+): xdr.ScVal[] {
+  return [encodeAddress(account), encodeBool(status)];
+}
+
+/**
+ * Encodes arguments for minting new token supply: `mint(to, amount)`
+ */
+export function encodeMintArgs(
+  to: string,
+  amount: bigint | number | string
+): xdr.ScVal[] {
+  return [encodeAddress(to), encodeI128(amount)];
+}
+
+/**
+ * Encodes arguments for burning token supply: `burn(from, amount)`
+ */
+export function encodeBurnArgs(
+  from: string,
+  amount: bigint | number | string
+): xdr.ScVal[] {
+  return [encodeAddress(from), encodeI128(amount)];
+}
+
+/**
+ * Encodes arguments for creating a marketplace escrow order:
+ * `create_order(order_id, creator, asset, quote_asset, amount, price, expiration_timestamp)`
+ */
+export function encodeCreateOrderArgs(params: {
+  orderId: string;
+  creator: string;
+  asset: string;
+  quoteAsset: string;
+  amount: bigint | number | string;
+  pricePerUnit: bigint | number | string;
+  expirationTimestamp: number | bigint;
+}): xdr.ScVal[] {
+  return [
+    encodeString(params.orderId),
+    encodeAddress(params.creator),
+    encodeAddress(params.asset),
+    encodeAddress(params.quoteAsset),
+    encodeI128(params.amount),
+    encodeI128(params.pricePerUnit),
+    encodeU64(params.expirationTimestamp),
+  ];
+}
+
+/**
+ * Encodes arguments for fulfilling an escrow trade atomically:
+ * `fulfill_order(order_id, buyer_or_seller, fill_amount)`
+ */
+export function encodeFulfillOrderArgs(params: {
+  orderId: string;
+  buyerOrSeller: string;
+  fillAmount: bigint | number | string;
+}): xdr.ScVal[] {
+  return [
+    encodeString(params.orderId),
+    encodeAddress(params.buyerOrSeller),
+    encodeI128(params.fillAmount),
+  ];
+}
+
+/**
+ * Alias matching Issue #1 acceptance criteria: `encode_fulfill_order`
+ */
+export const encode_fulfill_order = encodeFulfillOrderArgs;
+
+/**
+ * Encodes arguments for cancelling an active escrow order:
+ * `cancel_order(creator, order_id)`
+ */
+export function encodeCancelOrderArgs(params: {
+  creator: string;
+  orderId: string;
+}): xdr.ScVal[] {
+  return [encodeAddress(params.creator), encodeString(params.orderId)];
+}
+
+/**
+ * Encodes arguments for deploying a new compliant RWA token instance via AssetFactory:
+ * `deploy_rwa_token(deployer, salt, token_admin, name, symbol, decimals, total_supply)`
+ */
+export function encodeDeployRwaTokenArgs(params: {
+  deployer: string;
+  salt: Buffer | Uint8Array;
+  tokenAdmin: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  totalSupply: bigint | number | string;
+}): xdr.ScVal[] {
+  return [
+    encodeAddress(params.deployer),
+    encodeBytes(params.salt),
+    encodeAddress(params.tokenAdmin),
+    encodeString(params.name),
+    encodeString(params.symbol),
+    encodeU32(params.decimals),
+    encodeI128(params.totalSupply),
+  ];
+}
+

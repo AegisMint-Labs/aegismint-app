@@ -23,6 +23,12 @@ import {
   encodeMap,
   decodeMap,
   decodeScVal,
+  encodeTransferArgs,
+  encodeSetWhitelistArgs,
+  encodeFulfillOrderArgs,
+  encode_fulfill_order,
+  encodeCancelOrderArgs,
+  encodeCreateOrderArgs,
 } from './encoders.js';
 
 test('XDR Encoders: Address encoding and decoding', () => {
@@ -94,3 +100,67 @@ test('XDR Encoders: Vectors and Maps', () => {
   assert.equal(decodedMap.get('tier'), 'TIER_1_TREASURY');
   assert.equal(decodedMap.get('amount'), 1000000n);
 });
+
+test('XDR Encoders: Contract Call Argument Encoders', () => {
+  const alice = Keypair.random().publicKey();
+  const bob = Keypair.random().publicKey();
+
+  // 1. Transfer args
+  const transferArgs = encodeTransferArgs(alice, bob, 500000000n);
+  assert.equal(transferArgs.length, 3);
+  assert.equal(decodeAddress(transferArgs[0]), alice);
+  assert.equal(decodeAddress(transferArgs[1]), bob);
+  assert.equal(decodeI128(transferArgs[2]), 500000000n);
+
+  // 2. Set whitelist args
+  const wlArgs = encodeSetWhitelistArgs(bob, true);
+  assert.equal(wlArgs.length, 2);
+  assert.equal(decodeAddress(wlArgs[0]), bob);
+  assert.equal(decodeBool(wlArgs[1]), true);
+
+  // 3. Fulfill order args (Acceptance Criteria for Issue #1)
+  const fulfillParams = {
+    orderId: 'ORD-999',
+    buyerOrSeller: bob,
+    fillAmount: 25000000n,
+  };
+  const fulfillArgs = encodeFulfillOrderArgs(fulfillParams);
+  assert.equal(fulfillArgs.length, 3);
+  assert.equal(decodeString(fulfillArgs[0]), 'ORD-999');
+  assert.equal(decodeAddress(fulfillArgs[1]), bob);
+  assert.equal(decodeI128(fulfillArgs[2]), 25000000n);
+
+  // Test alias encode_fulfill_order
+  const aliasArgs = encode_fulfill_order(fulfillParams);
+  assert.equal(aliasArgs.length, 3);
+  assert.equal(decodeString(aliasArgs[0]), 'ORD-999');
+
+  // 4. Cancel order args
+  const cancelArgs = encodeCancelOrderArgs({ creator: alice, orderId: 'ORD-999' });
+  assert.equal(cancelArgs.length, 2);
+  assert.equal(decodeAddress(cancelArgs[0]), alice);
+  assert.equal(decodeString(cancelArgs[1]), 'ORD-999');
+
+  // 5. Create order args
+  const dummyHash = Buffer.alloc(32, 1);
+  const assetContract = StrKey.encodeContract(dummyHash);
+  const quoteContract = StrKey.encodeContract(Buffer.alloc(32, 2));
+  const createArgs = encodeCreateOrderArgs({
+    orderId: 'ORD-100',
+    creator: alice,
+    asset: assetContract,
+    quoteAsset: quoteContract,
+    amount: 100000000n,
+    pricePerUnit: 10000000n,
+    expirationTimestamp: 1735689600,
+  });
+  assert.equal(createArgs.length, 7);
+  assert.equal(decodeString(createArgs[0]), 'ORD-100');
+  assert.equal(decodeAddress(createArgs[1]), alice);
+  assert.equal(decodeAddress(createArgs[2]), assetContract);
+  assert.equal(decodeAddress(createArgs[3]), quoteContract);
+  assert.equal(decodeI128(createArgs[4]), 100000000n);
+  assert.equal(decodeI128(createArgs[5]), 10000000n);
+  assert.equal(decodeU64(createArgs[6]), 1735689600n);
+});
+

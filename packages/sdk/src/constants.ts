@@ -19,6 +19,20 @@ export const STANDALONE_CONFIG: SorobanNetworkConfig = {
   horizonUrl: 'http://localhost:8000',
 };
 
+export const STELLAR_NETWORKS = {
+  TESTNET: {
+    networkPassphrase: TESTNET_CONFIG.networkPassphrase,
+    sorobanRpcUrl: TESTNET_CONFIG.rpcUrl,
+    horizonUrl: TESTNET_CONFIG.horizonUrl,
+  },
+  MAINNET: {
+    networkPassphrase: MAINNET_CONFIG.networkPassphrase,
+    sorobanRpcUrl: MAINNET_CONFIG.rpcUrl,
+    horizonUrl: MAINNET_CONFIG.horizonUrl,
+  },
+} as const;
+
+
 /**
  * Standard Stellar / Soroban precision: 7 decimal places (1 unit = 10,000,000 stroops)
  */
